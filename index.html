@@ -1,0 +1,312 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Camera, 
+  CameraOff, 
+  Mic, 
+  MicOff, 
+  PhoneOff, 
+  MessageCircle, 
+  Clock, 
+  Send, 
+  Lock, 
+  MoreVertical, 
+  Paperclip,
+  Maximize,
+  User,
+  ShieldCheck
+} from 'lucide-react';
+
+export default function App() {
+  // Durum Yönetimi (State)
+  const [sessionActive, setSessionActive] = useState(false);
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [inputText, setInputText] = useState("");
+  const chatEndRef = useRef(null);
+
+  // Örnek Mesajlar
+  const [messages, setMessages] = useState([
+    { id: 1, text: "Merhaba, seansımıza hoş geldiniz. Kendinizi hazır hissettiğinizde başlayabiliriz.", sender: "therapist", time: "14:00" },
+    { id: 2, text: "Merhaba, teşekkür ederim. Biraz heyecanlıyım ama hazırım.", sender: "client", time: "14:02" }
+  ]);
+
+  // Saat Güncelleyici
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Seans Süresi Sayacı
+  useEffect(() => {
+    let interval;
+    if (sessionActive) {
+      interval = setInterval(() => {
+        setSessionDuration(prev => prev + 1);
+      }, 1000);
+    } else if (!sessionActive && sessionDuration !== 0) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [sessionActive, sessionDuration]);
+
+  // Chat alanını otomatik kaydırma
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isChatOpen]);
+
+  // Zaman Formatlayıcıları
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDuration = (seconds) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  // Mesaj Gönderme
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const newMessage = {
+      id: messages.length + 1,
+      text: inputText,
+      sender: "therapist",
+      time: formatTime(new Date())
+    };
+
+    setMessages([...messages, newMessage]);
+    setInputText("");
+  };
+
+  return (
+    <div className="flex h-screen bg-[#F7F9F8] font-sans text-stone-800 overflow-hidden">
+      
+      {/* SOL/ANA PANEL - VİDEO VE KONTROLLER */}
+      <div className={`flex flex-col flex-grow transition-all duration-300 ${isChatOpen ? 'w-2/3' : 'w-full'}`}>
+        
+        {/* Üst Bilgi Çubuğu (Header) */}
+        <header className="flex items-center justify-between px-6 py-4 bg-white shadow-sm z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-teal-100 text-teal-700 rounded-full flex items-center justify-center font-semibold text-lg">
+              AV
+            </div>
+            <div>
+              <h1 className="text-lg font-medium text-stone-800">Uzm. Psk. Dan. Ali Varol</h1>
+              <div className="flex items-center text-xs text-stone-500 gap-1 mt-0.5">
+                <ShieldCheck size={14} className="text-teal-600" />
+                Güvenli Terapi Odası
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col items-end">
+              <span className="text-sm text-stone-500 font-medium">Güncel Saat</span>
+              <span className="text-xl font-light text-stone-800">{formatTime(currentTime)}</span>
+            </div>
+            <div className="h-10 w-px bg-stone-200"></div>
+            <div className="flex flex-col items-end min-w-[100px]">
+              <span className="text-sm text-stone-500 font-medium">Seans Süresi</span>
+              <span className={`text-xl font-medium ${sessionActive ? 'text-teal-600' : 'text-stone-400'}`}>
+                {formatDuration(sessionDuration)}
+              </span>
+            </div>
+            {!sessionActive ? (
+              <button 
+                onClick={() => setSessionActive(true)}
+                className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-full font-medium transition-colors shadow-sm"
+              >
+                Seansı Başlat
+              </button>
+            ) : (
+              <button 
+                onClick={() => setSessionActive(false)}
+                className="px-6 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-full font-medium transition-colors"
+              >
+                Seansı Bitir
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Video Alanı */}
+        <main className="flex-grow p-6 relative flex flex-col items-center justify-center bg-[#F7F9F8]">
+          
+          {sessionActive ? (
+            <div className="w-full h-full relative max-w-5xl mx-auto rounded-3xl overflow-hidden shadow-lg bg-stone-900 border-4 border-white">
+              {/* Danışan Videosu (Büyük) */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <img 
+                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" 
+                  alt="Danışan" 
+                  className="w-full h-full object-cover opacity-90"
+                />
+                <div className="absolute bottom-6 left-6 bg-black/40 backdrop-blur-md text-white px-4 py-2 rounded-xl flex items-center gap-2">
+                  <User size={16} />
+                  <span className="font-medium text-sm">Ayşe B. (Danışan)</span>
+                </div>
+              </div>
+
+              {/* Terapist Videosu (Küçük - PiP) */}
+              <div className={`absolute top-6 right-6 w-48 h-64 bg-stone-800 rounded-2xl overflow-hidden border-2 border-white/20 shadow-xl transition-opacity ${isVideoOff ? 'opacity-90' : 'opacity-100'}`}>
+                {isVideoOff ? (
+                  <div className="w-full h-full flex items-center justify-center bg-stone-800">
+                    <CameraOff size={32} className="text-stone-400" />
+                  </div>
+                ) : (
+                  <img 
+                    src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" 
+                    alt="Terapist" 
+                    className="w-full h-full object-cover"
+                  />
+                )}
+                <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center">
+                  <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-md">
+                    Siz
+                  </div>
+                  {isMuted && (
+                    <div className="bg-rose-500/80 backdrop-blur-sm text-white p-1 rounded-md">
+                      <MicOff size={14} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-stone-400 gap-4">
+              <div className="w-24 h-24 bg-stone-200 rounded-full flex items-center justify-center mb-4">
+                <Camera size={40} className="text-stone-400" />
+              </div>
+              <h2 className="text-2xl font-medium text-stone-600">Seans Bekleniyor</h2>
+              <p className="text-stone-500 text-center max-w-md">
+                Kamera ve mikrofon ayarlarınızı kontrol edebilirsiniz. Sağ üst köşeden "Seansı Başlat" butonuna tıklayarak görüşmeye katılın.
+              </p>
+            </div>
+          )}
+
+          {/* Alt Kontrol Çubuğu */}
+          <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur-md px-8 py-4 rounded-full shadow-lg border border-stone-100">
+            <button 
+              onClick={() => setIsMuted(!isMuted)}
+              className={`p-4 rounded-full transition-colors ${isMuted ? 'bg-rose-100 text-rose-600' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
+              title={isMuted ? "Sesi Aç" : "Sessize Al"}
+            >
+              {isMuted ? <MicOff size={24} /> : <Mic size={24} />}
+            </button>
+            
+            <button 
+              onClick={() => setIsVideoOff(!isVideoOff)}
+              className={`p-4 rounded-full transition-colors ${isVideoOff ? 'bg-rose-100 text-rose-600' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
+              title={isVideoOff ? "Kamerayı Aç" : "Kamerayı Kapat"}
+            >
+              {isVideoOff ? <CameraOff size={24} /> : <Camera size={24} />}
+            </button>
+
+            <div className="w-px h-8 bg-stone-300 mx-2"></div>
+
+            <button 
+              onClick={() => setSessionActive(false)}
+              className={`p-4 rounded-full transition-colors ${sessionActive ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-md' : 'bg-stone-200 text-stone-400 cursor-not-allowed'}`}
+              disabled={!sessionActive}
+              title="Aramayı Sonlandır"
+            >
+              <PhoneOff size={24} />
+            </button>
+
+            <div className="w-px h-8 bg-stone-300 mx-2"></div>
+
+            <button 
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className={`p-4 rounded-full transition-colors ${isChatOpen ? 'bg-teal-100 text-teal-700' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'}`}
+              title="Sohbeti Aç/Kapat"
+            >
+              <MessageCircle size={24} />
+            </button>
+          </div>
+        </main>
+      </div>
+
+      {/* SAĞ PANEL - SOHBET (CHAT) */}
+      {isChatOpen && (
+        <aside className="w-1/3 min-w-[320px] max-w-[400px] bg-white border-l border-stone-200 flex flex-col h-full shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)] z-20 transition-all">
+          
+          {/* Sohbet Başlığı */}
+          <div className="p-5 border-b border-stone-100 flex items-center justify-between bg-white">
+            <div className="flex items-center gap-2 text-stone-800">
+              <MessageCircle size={20} className="text-teal-600" />
+              <h2 className="font-semibold text-lg">Sohbet</h2>
+            </div>
+            <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">
+              <Lock size={12} />
+              Uçtan Uca Şifreli
+            </div>
+          </div>
+
+          {/* Mesaj Listesi */}
+          <div className="flex-grow overflow-y-auto p-5 space-y-4 bg-stone-50/50">
+            {messages.map((msg) => (
+              <div 
+                key={msg.id} 
+                className={`flex flex-col ${msg.sender === 'therapist' ? 'items-end' : 'items-start'}`}
+              >
+                <div 
+                  className={`max-w-[85%] px-4 py-3 rounded-2xl text-[15px] leading-relaxed shadow-sm
+                    ${msg.sender === 'therapist' 
+                      ? 'bg-teal-600 text-white rounded-br-sm' 
+                      : 'bg-white text-stone-800 border border-stone-100 rounded-bl-sm'}`}
+                >
+                  {msg.text}
+                </div>
+                <span className="text-[11px] text-stone-400 mt-1.5 px-1 font-medium">
+                  {msg.time}
+                </span>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Mesaj Gönderme Alanı */}
+          <div className="p-4 bg-white border-t border-stone-100">
+            <form onSubmit={handleSendMessage} className="flex items-end gap-2 relative">
+              <div className="flex-grow bg-stone-50 border border-stone-200 rounded-2xl flex items-end p-1 transition-colors focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-50">
+                <button type="button" className="p-2 text-stone-400 hover:text-teal-600 transition-colors">
+                  <Paperclip size={20} />
+                </button>
+                <textarea 
+                  rows="1"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage(e);
+                    }
+                  }}
+                  placeholder="Mesajınızı yazın..."
+                  className="w-full bg-transparent border-none focus:ring-0 resize-none py-2.5 px-2 text-[15px] text-stone-700 max-h-32 placeholder:text-stone-400"
+                  style={{ minHeight: '44px' }}
+                />
+              </div>
+              <button 
+                type="submit"
+                disabled={!inputText.trim()}
+                className={`p-3.5 rounded-2xl flex-shrink-0 transition-all ${inputText.trim() ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-md' : 'bg-stone-100 text-stone-400'}`}
+              >
+                <Send size={20} className={inputText.trim() ? "ml-0.5" : ""} />
+              </button>
+            </form>
+            <p className="text-[10px] text-stone-400 text-center mt-3 flex items-center justify-center gap-1">
+              <Lock size={10} /> Bu sohbetteki mesajlar kaydedilmez ve üçüncü şahıslarla paylaşılamaz.
+            </p>
+          </div>
+        </aside>
+      )}
+    </div>
+  );
+}
